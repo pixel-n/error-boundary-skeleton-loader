@@ -1,152 +1,116 @@
-import React, { Component, useState, useEffect, Suspense, lazy } from 'react';
-// Error Boundary Component 
-class ErrorBoundary extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+import React, { useState, useEffect } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
+import { SkeletonLoader } from './components/SkeletonLoader';
 
-  // Update state so the next render shows fallback UI
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
-  }
-
-  handleReset = () => {
-    this.setState({ hasError: false, error: null });
-  };
-
-  render() {
-    if (this.state.hasError) {
-      // Fallback UI for caught errors
-      return (
-        <div className="p-4 border-2 border-red-500 bg-red-50 rounded-lg text-red-700 text-center">
-          <h3 className="font-bold text-lg">Module Error Encountered</h3>
-          <p className="text-sm my-2">{this.state.error?.message || "Something went wrong."}</p>
-          <button 
-            onClick={this.handleReset}
-            className="px-3 py-1 bg-red-600 text-white text-xs font-semibold rounded hover:bg-red-700 transition"
-          >
-            Reset Module
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-//  Skeleton Loading Component (Fallback UI) 
-const SkeletonCard = () => (
-  <div className="p-4 border rounded-lg shadow animate-pulse bg-white space-y-3">
-    <div className="h-5 bg-gray-300 rounded w-3/4"></div>
-    <div className="h-4 bg-gray-200 rounded w-full"></div>
-    <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-  </div>
-);
-
-//  Component with Logic & Error Simulation 
-const DataCard = ({ shouldError }) => {
+// Dynamic User Profile card without avatar
+const UserProfile = ({ triggerBug }) => {
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    setLoading(true);
+    const timer = setTimeout(() => {
+      setUser({
+        name: "Nawal Dev",
+        profile: {
+          bio: "Frontend engineer building responsive React applications with modern UI patterns.",
+          role: "Software engineer"
+        }
+      });
+      setLoading(false);
+    }, 1500);
 
-  if (shouldError) {
-    throw new Error("Failed to load component data!");
+    return () => clearTimeout(timer);
+  }, [triggerBug]);
+
+  // Throw runtime error to test the Error Boundary fallback
+  if (triggerBug) {
+    throw new Error("Failed to fetch user endpoint. Server responded with 500.");
   }
 
   if (loading) {
-    return <SkeletonCard />;
+    return <SkeletonLoader />;
   }
 
   return (
-    <div className="p-4 border rounded-lg shadow bg-white">
-      <h3 className="font-bold text-gray-800 text-lg">Active Data Module</h3>
-      <p className="text-gray-600 text-sm mt-1">
-        Content loaded cleanly without breaking the surrounding layout.
+    <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          {/* Optional chaining safely prevents crashes on missing data */}
+          <h2 className="text-lg font-bold text-slate-900">{user?.name}</h2>
+          <span className="inline-block mt-1 px-2.5 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full border border-indigo-100">
+            {user?.profile?.role ?? "Standard Member"}
+          </span>
+        </div>
+      </div>
+
+      <p className="text-slate-600 text-sm leading-relaxed">
+        {user?.profile?.bio}
       </p>
+
+      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+        <span>Status: <strong className="text-emerald-600 font-medium">● Active</strong></span>
+        <span>ID: #8942</span>
+      </div>
     </div>
   );
 };
 
-// Main App Component
+// Fallback UI caught by Error Boundary
+const ErrorFallback = ({ error, resetErrorBoundary }) => (
+  <div className="bg-rose-50/80 border border-rose-200 rounded-2xl p-6 text-center space-y-3">
+    <div className="w-10 h-10 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto text-lg font-bold">
+      !
+    </div>
+    <div>
+      <h3 className="font-semibold text-rose-900 text-sm">Component Failure Intercepted</h3>
+      <p className="text-xs text-rose-600 mt-1 font-mono">{error?.message}</p>
+    </div>
+    <button
+      onClick={resetErrorBoundary}
+      className="px-4 py-2 bg-rose-600 text-white text-xs font-semibold rounded-lg hover:bg-rose-700 active:scale-95 transition-all shadow-sm"
+    >
+      Recover Component
+    </button>
+  </div>
+);
+
+// Main Entry Component
 export default function App() {
-  const [triggerError, setTriggerError] = useState(false);
+  const [triggerBug, setTriggerBug] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8 font-sans flex flex-col justify-between">
-      <div className="max-w-2xl mx-auto w-full space-y-6">
-        <header className="text-center">
-          <h1 className="text-3xl font-bold text-gray-800">Advanced Patterns Demo</h1>
-          <p className="text-gray-600 mt-1">Error Boundaries & Skeleton Loading</p>
+    <div className="min-h-screen bg-slate-50/50 flex justify-center items-start pt-16 px-4 font-sans text-slate-800">
+      <main className="w-full max-w-md space-y-5">
+        <header className="text-center space-y-1">
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">User Dashboard</h1>
+          <p className="text-xs text-slate-500">
+            Isolated error boundaries & async skeleton states
+          </p>
         </header>
 
-        <div className="flex justify-center">
+        {/* Toggle button to test Error Boundary UI */}
+        <div className="flex justify-center gap-2">
           <button
-            onClick={() => setTriggerError(!triggerError)}
-            className="px-4 py-2 bg-indigo-600 text-white font-medium rounded shadow hover:bg-indigo-700 transition"
+            onClick={() => setTriggerBug((prev) => !prev)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
+              triggerBug
+                ? 'bg-amber-500 text-white border-amber-600'
+                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+            }`}
           >
-            Toggle Error State ({triggerError ? 'ON' : 'OFF'})
+            {triggerBug ? 'Disable Error State' : 'Simulate Runtime Error'}
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Section 1: Error Boundary Protection */}
-          <div>
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Stable Card</h2>
-            <ErrorBoundary>
-              <DataCard shouldError={false} />
-            </ErrorBoundary>
-          </div>
-
-          {/* Section 2: Error Boundary Trapping Failure */}
-          <div>
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Isolated Fault Card</h2>
-            <ErrorBoundary>
-              <DataCard shouldError={triggerError} />
-            </ErrorBoundary>
-          </div>
-        </div>
-      </div>
-
-      {/* --- Powered By Footer Section --- */}
-      <footer className="max-w-2xl mx-auto w-full mt-12 pt-6 border-t border-gray-300">
-        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 text-center">
-          Powered By Architecture
-        </h3>
-        
-        {/* Suspense handles async fallback UI */}
-        <Suspense fallback={<SkeletonCard />}>
-          <ErrorBoundary>
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 text-center space-y-2">
-              <div className="flex flex-wrap justify-center gap-2">
-                {/* Fallback UI Tag */}
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
-                  Fallback UI
-                </span>
-                {/* Suspense Tag */}
-                <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded">
-                  React Suspense
-                </span>
-                {/* Error Boundary Tag */}
-                <span className="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs font-medium rounded">
-                  Error Boundary
-                </span>
-              </div>
-              <p className="text-xs text-gray-500">
-                Isolated resilience preventing top-level crashes using graceful fallback boundaries.
-              </p>
-            </div>
-          </ErrorBoundary>
-        </Suspense>
-      </footer>
+        {/* Functional Error Boundary */}
+        <ErrorBoundary
+          FallbackComponent={ErrorFallback}
+          onReset={() => setTriggerBug(false)}
+        >
+          <UserProfile triggerBug={triggerBug} />
+        </ErrorBoundary>
+      </main>
     </div>
   );
 }
-
